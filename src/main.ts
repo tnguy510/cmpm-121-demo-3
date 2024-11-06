@@ -5,7 +5,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 const header = document.createElement("h1");
 
 document.title = APP_NAME;
-//app.innerHTML = APP_NAME;
+//app.innerHTML = APP_NAME; test
 header.innerHTML = APP_NAME;
 app.append(header);
 
