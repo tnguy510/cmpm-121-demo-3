@@ -23,8 +23,36 @@ interface Coin {
   readonly serial: number;
 }
 
-interface Cache {
-  readonly coins: Coin[];
+//interface Cache {
+//readonly coins: Coin[];
+//}
+
+interface Memento<T> {
+  toMemento(): T;
+  fromMemento(memento: T): void;
+}
+
+class GeoCache implements Memento<string> {
+  column: number;
+  row: number;
+  numCoins: number;
+
+  constructor() {
+    this.column = 0;
+    this.row = 1;
+    this.numCoins = 2;
+  }
+
+  toMemento() {
+    return `${this.column}, ${this.row}, ${this.numCoins}`;
+  }
+
+  fromMemento(memento: string) {
+    const [column, row, numCoins] = memento.split(",").map(Number);
+    this.column = column;
+    this.row = row;
+    this.numCoins = numCoins;
+  }
 }
 
 // Location of our classroom (as identified on Google Maps)
@@ -36,6 +64,8 @@ const CACHE_SPAWN_PROBABILITY = 0.1;
 const gamezoom = 19;
 const playerMarker = leaflet.marker(origin);
 const playerCoins: Array<Coin> = [];
+const geoCaches: GeoCache[] = [];
+const mementos: string[] = [];
 const map = leaflet.map(document.getElementById("map")!, {
   center: origin,
   zoom: gamezoom,
@@ -52,7 +82,7 @@ leaflet
   })
   .addTo(map);
 const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
-const cells = board.getCellsNearPoint(origin);
+let cells = board.getCellsNearPoint(origin);
 
 playerMarker.bindTooltip("Your location!");
 playerMarker.addTo(map);
@@ -128,6 +158,59 @@ function spawnCache(cell: Cell) {
   });
 }
 
+function CacheCells() {
+  cells = board.getCellsNearPoint(origin);
+  cells.forEach((cell) => {
+    const mementoCheck = mementos.some((momento) => {
+      const [i, j] = momento.split(",").map(Number);
+      return i === cell.i && j === cell.j;
+    });
+    if (
+      !mementoCheck &&
+      luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY
+    ) {
+      const newCache = new GeoCache();
+      newCache.column = cell.i;
+      newCache.row = cell.j;
+      newCache.numCoins = Math.floor(luck([cell.i, cell.j].toString()) * 100);
+      geoCaches.push(newCache);
+      spawnCache(cell);
+    } else {
+      const memFound = mementos.find((memento) => {
+        const [i, j] = memento.split(",").map(Number);
+        return i === cell.i && j === cell.j;
+      });
+      if (memFound) {
+        const [i, j, coins] = memFound.split(",").map(Number);
+        const existingCache = new GeoCache();
+        existingCache.column = i;
+        existingCache.row = j;
+        existingCache.numCoins = coins;
+        geoCaches.push(existingCache);
+        spawnCache(cell);
+      }
+    }
+  });
+}
+
+function removeCaches() {
+  geoCaches.forEach((cache) => {
+    mementos.push(cache.toMemento());
+  });
+  map.eachLayer((layer) => {
+    if (layer instanceof leaflet.Rectangle) {
+      map.removeLayer(layer);
+    }
+  });
+  geoCaches.length = 0;
+}
+
+function playerMovement(column: number, row: number) {
+  origin.lat += column;
+  origin.lng += row;
+  playerMarker.setLatLng(origin);
+}
+
 // Look around the player's neighborhood for caches to spawn
 for (let i = 0; i < cells.length; i++) {
   if (luck([cells[i].i, cells[i].j].toString()) < CACHE_SPAWN_PROBABILITY) {
@@ -135,3 +218,26 @@ for (let i = 0; i < cells.length; i++) {
     spawnCache(cells[i]);
   }
 }
+
+CacheCells();
+//Button Movement
+document.getElementById("north")?.addEventListener("click", () => {
+  playerMovement(TILE_DEGREES, 0);
+  removeCaches();
+  CacheCells();
+});
+document.getElementById("south")?.addEventListener("click", () => {
+  playerMovement(-TILE_DEGREES, 0);
+  removeCaches();
+  CacheCells();
+});
+document.getElementById("east")?.addEventListener("click", () => {
+  playerMovement(0, TILE_DEGREES);
+  removeCaches();
+  CacheCells();
+});
+document.getElementById("west")?.addEventListener("click", () => {
+  playerMovement(0, -TILE_DEGREES);
+  removeCaches();
+  CacheCells();
+});
