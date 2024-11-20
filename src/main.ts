@@ -347,6 +347,6 @@ document.getElementById("sensor")?.addEventListener("click", () => {
     removeCaches();
     resetMap(newLocation);
     map.setView(newLocation);
-    saveGameState;
+    saveGameState();
   });
 });
