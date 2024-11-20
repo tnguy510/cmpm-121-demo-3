@@ -23,10 +23,6 @@ interface Coin {
   readonly serial: number;
 }
 
-interface Cache {
-  readonly coins: Coin[];
-}
-
 interface Memento<T> {
   toMemento(): T;
   fromMemento(memento: T): void;
@@ -62,10 +58,13 @@ const origin = leaflet.latLng(36.98949379578401, -122.06277128548504); //startin
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
+const KEY = "LOCAL";
 const gamezoom = 18;
-const playerMarker = leaflet.marker(origin);
-const playerCoins: Array<Coin> = [];
-const geoCaches: GeoCache[] = [];
+let currentLocation = leaflet.latLng(36.98949379578401, -122.06277128548504);
+const playerMarker = leaflet.marker(currentLocation);
+let playerHistory: leaflet.LatLng[] = [];
+let playerCoins: Array<Coin> = [];
+let geoCaches: GeoCache[] = [];
 let mementos: string[] = [];
 const map = leaflet.map(document.getElementById("map")!, {
   center: origin,
@@ -82,11 +81,19 @@ leaflet
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   })
   .addTo(map);
+
+const path: leaflet.Polyline = leaflet.polyline([], {
+  color: "red",
+  weight: 5,
+  opacity: 0.3,
+});
+
 const board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 let cells = board.getCellsNearPoint(origin);
 
 playerMarker.bindTooltip("Your location!");
 playerMarker.addTo(map);
+path.addTo(map);
 
 // Add caches to the map by cell numbers
 function spawnCache(cell: Cell, cache: GeoCache) {
@@ -161,7 +168,7 @@ function spawnCache(cell: Cell, cache: GeoCache) {
 }
 
 function CacheCells() {
-  cells = board.getCellsNearPoint(origin);
+  cells = board.getCellsNearPoint(currentLocation);
   cells.forEach((cell) => {
     const mementoCheck = mementos.some((memento) => {
       const [i, j] = memento.split(",").map(Number);
@@ -228,13 +235,79 @@ function updateMementoArray() {
   });
 }
 
-function playerMovement(column: number, row: number) {
-  origin.lat += column;
-  origin.lng += row;
-  playerMarker.setLatLng(origin);
+function resetMap(origin: leaflet.LatLng) {
+  currentLocation = origin;
+  playerMovement(0, 0);
+  path.setLatLngs([]);
+  playerCoins = [];
+  playerHistory = [];
+  geoCaches = [];
+  mementos = [];
+  CacheCells();
+  statusPanel.innerHTML = ``;
 }
 
-CacheCells();
+function playerMovement(column: number, row: number) {
+  const newLocation: leaflet.LatLng = leaflet.latLng(0, 0);
+  newLocation.lat = currentLocation.lat + column;
+  newLocation.lng = currentLocation.lng + row;
+  playerMarker.setLatLng(newLocation);
+  playerHistory.push(newLocation);
+  path.setLatLngs(playerHistory);
+  currentLocation = newLocation;
+  saveGameState();
+}
+
+function saveGameState() {
+  const gameState = {
+    currentLocation,
+    playerCoins,
+    playerHistory,
+    mementos,
+    geoCaches,
+  };
+
+  localStorage.setItem(KEY, JSON.stringify(gameState));
+}
+
+function loadGameState(): void {
+  const gameState = localStorage.getItem(KEY);
+  if (gameState) {
+    const state = JSON.parse(gameState);
+    if (!state) {
+      return;
+    }
+    currentLocation = state.currentLocation;
+    playerHistory = state.playerHistory;
+    mementos = state.mementos;
+    playerCoins = state.playerCoins;
+
+    if (!currentLocation) {
+      alert("Something went wrong with your location.");
+      currentLocation = origin;
+    }
+    playerMarker.setLatLng(currentLocation);
+    CacheCells();
+    path.setLatLngs(playerHistory);
+    let walletText = "";
+    for (let i = 0; i < playerCoins.length; i++) {
+      walletText += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
+        playerCoins[i].serial
+      }`;
+      walletText += "| ";
+    }
+    statusPanel.innerHTML = `Coins in Wallet: ${walletText}`;
+    map.setView(currentLocation);
+  } else {
+    playerMovement(0, 0);
+    playerHistory.push(currentLocation);
+    removeCaches();
+    CacheCells;
+  }
+}
+
+//CacheCells();
+loadGameState();
 //Button Movement
 document.getElementById("north")?.addEventListener("click", () => {
   playerMovement(TILE_DEGREES, 0);
@@ -255,4 +328,25 @@ document.getElementById("west")?.addEventListener("click", () => {
   playerMovement(0, -TILE_DEGREES);
   removeCaches();
   CacheCells();
+});
+document.getElementById("reset")?.addEventListener("click", () => {
+  const promptConfirmation = prompt("Are you sure you want to reset? Yes | No");
+  if (promptConfirmation?.toLocaleLowerCase() === "yes") {
+    alert("Resetted Maps");
+    removeCaches();
+    localStorage.clear();
+    resetMap(origin);
+    resetMap(origin);
+    map.setView(origin);
+  }
+});
+document.getElementById("sensor")?.addEventListener("click", () => {
+  navigator.geolocation.watchPosition((position) => {
+    const { latitude, longitude } = position.coords;
+    const newLocation = leaflet.latLng(latitude, longitude);
+    removeCaches();
+    resetMap(newLocation);
+    map.setView(newLocation);
+    saveGameState;
+  });
 });
