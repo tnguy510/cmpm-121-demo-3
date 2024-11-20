@@ -45,7 +45,6 @@ class GeoCache implements Memento<string> {
 
   toMemento() {
     return `${this.column},${this.row},${this.numCoins}`;
-    //return JSON.stringify(this.coinCache);
   }
 
   fromMemento(memento: string) {
@@ -54,8 +53,6 @@ class GeoCache implements Memento<string> {
     this.column = column;
     this.row = row;
     this.numCoins = numCoins;
-    //this.numCoins = parseInt(memento);
-    //this.coinCache = JSON.parse(memento);
   }
 }
 
@@ -100,16 +97,7 @@ function spawnCache(cell: Cell, cache: GeoCache) {
   rect.addTo(map);
 
   let coins = cache.numCoins;
-  //if(coinsCache){
-  //coins = coinsCache;
-  //}
-  //else{
-  //coins = Math.floor(
-  //luck([cell.i, cell.j, "initialValue"].toString()) * 100,
-  //);
-  //}
   const serialCoins: Array<Coin> = [];
-  //const serialCoins = cell.coinCache.coins;
 
   // Handle interactions with the cache
   rect.bindPopup(() => {
@@ -180,8 +168,6 @@ function CacheCells() {
       return i === cell.i && j === cell.j;
     });
 
-    console.log(mementoCheck);
-
     if (
       !mementoCheck &&
       luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY
@@ -190,7 +176,6 @@ function CacheCells() {
       newCache.column = cell.i;
       newCache.row = cell.j;
       newCache.numCoins = Math.floor(luck([cell.i, cell.j].toString()) * 100);
-      //newCache.numCoins = cell.numCoins;
       geoCaches.push(newCache);
       spawnCache(cell, newCache);
     } else {
@@ -204,7 +189,6 @@ function CacheCells() {
         existingCache.column = i;
         existingCache.row = j;
         existingCache.numCoins = coins;
-        //geoCaches.push(existingCache);
         spawnCache(cell, existingCache);
       }
     }
@@ -218,7 +202,6 @@ function removeCaches() {
       map.removeLayer(layer);
     }
   });
-  //geoCaches.length = 0;
 }
 
 function updateCellCache(cell: Cell, cacheCoins: number) {
@@ -228,23 +211,14 @@ function updateCellCache(cell: Cell, cacheCoins: number) {
   const memFound = mementos.find((memento) => {
     const [i, j] = memento.split(",").map(Number);
     index++;
-    console.log(index);
     return i === cell.i && j === cell.j;
-    //console.log("find is still running");
   });
-  console.log(memFound);
   if (memFound) {
-    console.log("Old Cache: ", geoCaches[index]);
-    console.log("Old Mem: ", mementos[index]);
     geoCaches[index].numCoins = cacheCoins;
 
     const newMemento = geoCaches[index].toMemento();
     mementos[index] = newMemento;
-    //cache.fromMemento(memFound);
-    console.log("New Cache: ", geoCaches[index]);
-    console.log("New Mem: ", mementos[index]);
   }
-  console.log("Mementos array: ", mementos);
 }
 
 function updateMementoArray() {
@@ -260,44 +234,25 @@ function playerMovement(column: number, row: number) {
   playerMarker.setLatLng(origin);
 }
 
-// Look around the player's neighborhood for caches to spawn
-//for (let i = 0; i < cells.length; i++) {
-//if (luck([cells[i].i, cells[i].j].toString()) < CACHE_SPAWN_PROBABILITY) {
-//console.log(cells[i]);
-//spawnCache(cells[i]);
-//}
-//}
-
 CacheCells();
-
-console.log("Mementos array: ", mementos);
-console.log("Cache array: ", geoCaches);
 //Button Movement
 document.getElementById("north")?.addEventListener("click", () => {
   playerMovement(TILE_DEGREES, 0);
   removeCaches();
   CacheCells();
-  console.log("Mementos array: ", mementos);
-  console.log("Cache array: ", geoCaches);
 });
 document.getElementById("south")?.addEventListener("click", () => {
   playerMovement(-TILE_DEGREES, 0);
   removeCaches();
   CacheCells();
-  console.log("Mementos array: ", mementos);
-  console.log("Cache array: ", geoCaches);
 });
 document.getElementById("east")?.addEventListener("click", () => {
   playerMovement(0, TILE_DEGREES);
   removeCaches();
   CacheCells();
-  console.log("Mementos array: ", mementos);
-  console.log("Cache array: ", geoCaches);
 });
 document.getElementById("west")?.addEventListener("click", () => {
   playerMovement(0, -TILE_DEGREES);
   removeCaches();
   CacheCells();
-  console.log("Mementos array: ", mementos);
-  console.log("Cache array: ", geoCaches);
 });
