@@ -302,11 +302,11 @@ function loadGameState(): void {
     playerMovement(0, 0);
     playerHistory.push(currentLocation);
     removeCaches();
-    CacheCells;
+    CacheCells();
   }
 }
 
-CacheCells();
+//CacheCells();
 loadGameState();
 //Button Movement
 document.getElementById("north")?.addEventListener("click", () => {
