@@ -23,9 +23,9 @@ interface Coin {
   readonly serial: number;
 }
 
-//interface Cache {
-//readonly coins: Coin[];
-//}
+interface Cache {
+  readonly coins: Coin[];
+}
 
 interface Memento<T> {
   toMemento(): T;
@@ -44,14 +44,18 @@ class GeoCache implements Memento<string> {
   }
 
   toMemento() {
-    return `${this.column}, ${this.row}, ${this.numCoins}`;
+    return `${this.column},${this.row},${this.numCoins}`;
+    //return JSON.stringify(this.coinCache);
   }
 
   fromMemento(memento: string) {
+    console.log(memento);
     const [column, row, numCoins] = memento.split(",").map(Number);
     this.column = column;
     this.row = row;
     this.numCoins = numCoins;
+    //this.numCoins = parseInt(memento);
+    //this.coinCache = JSON.parse(memento);
   }
 }
 
@@ -61,11 +65,11 @@ const origin = leaflet.latLng(36.98949379578401, -122.06277128548504); //startin
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
-const gamezoom = 19;
+const gamezoom = 18;
 const playerMarker = leaflet.marker(origin);
 const playerCoins: Array<Coin> = [];
 const geoCaches: GeoCache[] = [];
-const mementos: string[] = [];
+let mementos: string[] = [];
 const map = leaflet.map(document.getElementById("map")!, {
   center: origin,
   zoom: gamezoom,
@@ -88,20 +92,28 @@ playerMarker.bindTooltip("Your location!");
 playerMarker.addTo(map);
 
 // Add caches to the map by cell numbers
-function spawnCache(cell: Cell) {
+function spawnCache(cell: Cell, cache: GeoCache) {
   // Convert cell numbers into lat/lng bounds
   const bounds = board.getCellBounds(cell);
   // Add a rectangle to the map to represent the cache
   const rect = leaflet.rectangle(bounds);
   rect.addTo(map);
 
+  let coins = cache.numCoins;
+  //if(coinsCache){
+  //coins = coinsCache;
+  //}
+  //else{
+  //coins = Math.floor(
+  //luck([cell.i, cell.j, "initialValue"].toString()) * 100,
+  //);
+  //}
+  const serialCoins: Array<Coin> = [];
+  //const serialCoins = cell.coinCache.coins;
+
   // Handle interactions with the cache
   rect.bindPopup(() => {
     // Each cache has a random point value, mutable by the player
-    let coins = Math.floor(
-      luck([cell.i, cell.j, "initialValue"].toString()) * 100,
-    );
-    const serialCoins: Array<Coin> = [];
     for (let i = coins; i > 0; i--) {
       const newCoin: Coin = { cell: cell, serial: i };
       serialCoins.push(newCoin);
@@ -132,6 +144,7 @@ function spawnCache(cell: Cell) {
         } else {
           alert("Your wallet is empty.");
         }
+        updateCellCache(cell, coins);
       });
 
     popupDiv
@@ -153,6 +166,7 @@ function spawnCache(cell: Cell) {
         } else {
           alert("There is no more coins in the cache");
         }
+        updateCellCache(cell, coins);
       });
     return popupDiv;
   });
@@ -161,10 +175,13 @@ function spawnCache(cell: Cell) {
 function CacheCells() {
   cells = board.getCellsNearPoint(origin);
   cells.forEach((cell) => {
-    const mementoCheck = mementos.some((momento) => {
-      const [i, j] = momento.split(",").map(Number);
+    const mementoCheck = mementos.some((memento) => {
+      const [i, j] = memento.split(",").map(Number);
       return i === cell.i && j === cell.j;
     });
+
+    console.log(mementoCheck);
+
     if (
       !mementoCheck &&
       luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY
@@ -173,8 +190,9 @@ function CacheCells() {
       newCache.column = cell.i;
       newCache.row = cell.j;
       newCache.numCoins = Math.floor(luck([cell.i, cell.j].toString()) * 100);
+      //newCache.numCoins = cell.numCoins;
       geoCaches.push(newCache);
-      spawnCache(cell);
+      spawnCache(cell, newCache);
     } else {
       const memFound = mementos.find((memento) => {
         const [i, j] = memento.split(",").map(Number);
@@ -186,23 +204,54 @@ function CacheCells() {
         existingCache.column = i;
         existingCache.row = j;
         existingCache.numCoins = coins;
-        geoCaches.push(existingCache);
-        spawnCache(cell);
+        //geoCaches.push(existingCache);
+        spawnCache(cell, existingCache);
       }
     }
   });
 }
 
 function removeCaches() {
-  geoCaches.forEach((cache) => {
-    mementos.push(cache.toMemento());
-  });
+  updateMementoArray();
   map.eachLayer((layer) => {
     if (layer instanceof leaflet.Rectangle) {
       map.removeLayer(layer);
     }
   });
-  geoCaches.length = 0;
+  //geoCaches.length = 0;
+}
+
+function updateCellCache(cell: Cell, cacheCoins: number) {
+  let index = -1;
+  updateMementoArray();
+
+  const memFound = mementos.find((memento) => {
+    const [i, j] = memento.split(",").map(Number);
+    index++;
+    console.log(index);
+    return i === cell.i && j === cell.j;
+    //console.log("find is still running");
+  });
+  console.log(memFound);
+  if (memFound) {
+    console.log("Old Cache: ", geoCaches[index]);
+    console.log("Old Mem: ", mementos[index]);
+    geoCaches[index].numCoins = cacheCoins;
+
+    const newMemento = geoCaches[index].toMemento();
+    mementos[index] = newMemento;
+    //cache.fromMemento(memFound);
+    console.log("New Cache: ", geoCaches[index]);
+    console.log("New Mem: ", mementos[index]);
+  }
+  console.log("Mementos array: ", mementos);
+}
+
+function updateMementoArray() {
+  mementos = [];
+  geoCaches.forEach((cache) => {
+    mementos.push(cache.toMemento());
+  });
 }
 
 function playerMovement(column: number, row: number) {
@@ -212,32 +261,43 @@ function playerMovement(column: number, row: number) {
 }
 
 // Look around the player's neighborhood for caches to spawn
-for (let i = 0; i < cells.length; i++) {
-  if (luck([cells[i].i, cells[i].j].toString()) < CACHE_SPAWN_PROBABILITY) {
-    //console.log(cells[i]);
-    spawnCache(cells[i]);
-  }
-}
+//for (let i = 0; i < cells.length; i++) {
+//if (luck([cells[i].i, cells[i].j].toString()) < CACHE_SPAWN_PROBABILITY) {
+//console.log(cells[i]);
+//spawnCache(cells[i]);
+//}
+//}
 
 CacheCells();
+
+console.log("Mementos array: ", mementos);
+console.log("Cache array: ", geoCaches);
 //Button Movement
 document.getElementById("north")?.addEventListener("click", () => {
   playerMovement(TILE_DEGREES, 0);
   removeCaches();
   CacheCells();
+  console.log("Mementos array: ", mementos);
+  console.log("Cache array: ", geoCaches);
 });
 document.getElementById("south")?.addEventListener("click", () => {
   playerMovement(-TILE_DEGREES, 0);
   removeCaches();
   CacheCells();
+  console.log("Mementos array: ", mementos);
+  console.log("Cache array: ", geoCaches);
 });
 document.getElementById("east")?.addEventListener("click", () => {
   playerMovement(0, TILE_DEGREES);
   removeCaches();
   CacheCells();
+  console.log("Mementos array: ", mementos);
+  console.log("Cache array: ", geoCaches);
 });
 document.getElementById("west")?.addEventListener("click", () => {
   playerMovement(0, -TILE_DEGREES);
   removeCaches();
   CacheCells();
+  console.log("Mementos array: ", mementos);
+  console.log("Cache array: ", geoCaches);
 });
