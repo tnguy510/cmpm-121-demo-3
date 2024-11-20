@@ -204,7 +204,7 @@ function CacheCells() {
 
 function removeCaches() {
   updateMementoArray();
-  map.eachLayer((layer) => {
+  map.eachLayer((layer : leaflet.Rectangle) => {
     if (layer instanceof leaflet.Rectangle) {
       map.removeLayer(layer);
     }
@@ -226,6 +226,8 @@ function updateCellCache(cell: Cell, cacheCoins: number) {
     const newMemento = geoCaches[index].toMemento();
     mementos[index] = newMemento;
   }
+  saveGameState();
+  saveGameState();
 }
 
 function updateMementoArray() {
