@@ -306,7 +306,7 @@ function loadGameState(): void {
   }
 }
 
-//CacheCells();
+CacheCells();
 loadGameState();
 //Button Movement
 document.getElementById("north")?.addEventListener("click", () => {
