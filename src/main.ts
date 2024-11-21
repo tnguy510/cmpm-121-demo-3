@@ -204,7 +204,7 @@ function CacheCells() {
 
 function removeCaches() {
   updateMementoArray();
-  map.eachLayer((layer : leaflet.Rectangle) => {
+  map.eachLayer((layer) => {
     if (layer instanceof leaflet.Rectangle) {
       map.removeLayer(layer);
     }
