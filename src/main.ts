@@ -124,18 +124,7 @@ function spawnCache(cell: Cell, cache: GeoCache) {
       .querySelector<HTMLButtonElement>("#deposit")!
       .addEventListener("click", () => {
         if (playerCoins.length > 0) {
-          coins++;
-          serialCoins.push(playerCoins.pop()!);
-          let serial = "";
-          for (let i = 0; i < playerCoins.length; i++) {
-            serial += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
-              playerCoins[i].serial
-            }`;
-            serial += "| ";
-          }
-          popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML =
-            `${coins}`;
-          statusPanel.innerHTML = `Coins in Wallet: ${serial}`;
+          coins = cachePopUpLogic(coins, 1, playerCoins, serialCoins, popupDiv);
         } else {
           alert("Your wallet is empty.");
         }
@@ -146,18 +135,13 @@ function spawnCache(cell: Cell, cache: GeoCache) {
       .querySelector<HTMLButtonElement>("#withdraw")!
       .addEventListener("click", () => {
         if (coins > 0) {
-          coins--;
-          playerCoins.push(serialCoins.pop()!);
-          let serial = "";
-          for (let i = 0; i < playerCoins.length; i++) {
-            serial += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
-              playerCoins[i].serial
-            }`;
-            serial += "| ";
-          }
-          popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML =
-            `${coins}`;
-          statusPanel.innerHTML = `Coins in Wallet: ${serial}`;
+          coins = cachePopUpLogic(
+            coins,
+            -1,
+            serialCoins,
+            playerCoins,
+            popupDiv,
+          );
         } else {
           alert("There is no more coins in the cache");
         }
@@ -165,6 +149,29 @@ function spawnCache(cell: Cell, cache: GeoCache) {
       });
     return popupDiv;
   });
+}
+
+//Handles Logic of Updating Coins being taken out/placed in of the cache and Wallets
+//Also handles the text changes
+function cachePopUpLogic(
+  coins: number,
+  amount: number,
+  coinsRemovedArr: Coin[],
+  coinsAddedArr: Coin[],
+  popupDiv: HTMLDivElement,
+) {
+  coins += amount;
+  coinsAddedArr.push(coinsRemovedArr.pop()!);
+  let serial = "";
+  for (let i = 0; i < playerCoins.length; i++) {
+    serial += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
+      playerCoins[i].serial
+    }`;
+    serial += "| ";
+  }
+  popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = `${coins}`;
+  statusPanel.innerHTML = `Coins in Wallet: ${serial}`;
+  return coins;
 }
 
 function CacheCells() {
@@ -308,7 +315,6 @@ function loadGameState(): void {
   }
 }
 
-//CacheCells();
 loadGameState();
 //Button Movement
 document.getElementById("north")?.addEventListener("click", () => {
