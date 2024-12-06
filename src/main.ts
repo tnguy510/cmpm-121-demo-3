@@ -162,16 +162,20 @@ function cachePopUpLogic(
 ) {
   coins += amount;
   coinsAddedArr.push(coinsRemovedArr.pop()!);
-  let serial = "";
+  popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = `${coins}`;
+  updateWalletText();
+  return coins;
+}
+
+function updateWalletText() {
+  let walletText = "";
   for (let i = 0; i < playerCoins.length; i++) {
-    serial += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
+    walletText += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
       playerCoins[i].serial
     }`;
-    serial += "| ";
+    walletText += "| ";
   }
-  popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = `${coins}`;
-  statusPanel.innerHTML = `Coins in Wallet: ${serial}`;
-  return coins;
+  statusPanel.innerHTML = `Coins in Wallet: ${walletText}`;
 }
 
 function CacheCells() {
@@ -298,14 +302,7 @@ function loadGameState(): void {
     playerMarker.setLatLng(currentLocation);
     CacheCells();
     path.setLatLngs(playerHistory);
-    let walletText = "";
-    for (let i = 0; i < playerCoins.length; i++) {
-      walletText += `${playerCoins[i].cell.j}: ${playerCoins[i].cell.i}#${
-        playerCoins[i].serial
-      }`;
-      walletText += "| ";
-    }
-    statusPanel.innerHTML = `Coins in Wallet: ${walletText}`;
+    updateWalletText();
     map.setView(currentLocation);
   } else {
     playerMovement(0, 0);
