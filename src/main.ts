@@ -190,12 +190,13 @@ function CacheCells() {
       !mementoCheck &&
       luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY
     ) {
-      const newCache = new GeoCache();
-      newCache.column = cell.i;
-      newCache.row = cell.j;
-      newCache.numCoins = Math.floor(luck([cell.i, cell.j].toString()) * 100);
+      const newCache = cacheInit(
+        cell.i,
+        cell.j,
+        Math.floor(luck([cell.i, cell.j].toString()) * 100),
+        cell,
+      );
       geoCaches.push(newCache);
-      spawnCache(cell, newCache);
     } else {
       const memFound = mementos.find((memento) => {
         const [i, j] = memento.split(",").map(Number);
@@ -203,14 +204,21 @@ function CacheCells() {
       });
       if (memFound) {
         const [i, j, coins] = memFound.split(",").map(Number);
-        const existingCache = new GeoCache();
-        existingCache.column = i;
-        existingCache.row = j;
-        existingCache.numCoins = coins;
-        spawnCache(cell, existingCache);
+        cacheInit(i, j, coins, cell);
       }
     }
   });
+}
+
+//Creates a cache and initializes its class variables before spawning a new one
+//Returns as needed
+function cacheInit(column: number, row: number, numCoins: number, cell: Cell) {
+  const newCache = new GeoCache();
+  newCache.column = column;
+  newCache.row = row;
+  newCache.numCoins = numCoins;
+  spawnCache(cell, newCache);
+  return newCache;
 }
 
 function removeCaches() {
